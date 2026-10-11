@@ -18,10 +18,11 @@ dotenv.config({ path: fileURLToPath(new URL("../.env", import.meta.url)) });
 const app = express();
 const server = http.createServer(app);
 const clientUrl = process.env.CLIENT_URL || "http://localhost:5173";
+const allowedClientUrls = new Set(clientUrl.split(",").map((url) => url.trim()).filter(Boolean));
 const allowOrigin = (origin, callback) => {
   const isLocalDevelopmentOrigin = process.env.NODE_ENV !== "production" &&
     /^https?:\/\/(?:localhost|127\.0\.0\.1)(?::\d+)?$/.test(origin || "");
-  callback(null, !origin || origin === clientUrl || isLocalDevelopmentOrigin);
+  callback(null, !origin || allowedClientUrls.has(origin) || isLocalDevelopmentOrigin);
 };
 const corsOptions = { origin: allowOrigin, methods: ["GET", "POST"] };
 const io = new Server(server, {

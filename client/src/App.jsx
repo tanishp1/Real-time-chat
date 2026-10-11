@@ -6,8 +6,12 @@ import {
   Smile, Sparkles, Users, X
 } from "lucide-react";
 
-const API_URL = import.meta.env.VITE_API_URL || (import.meta.env.DEV ? "/api" : "http://localhost:5000/api");
-const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || (import.meta.env.DEV ? window.location.origin : "http://localhost:5000");
+const configuredApiUrl = import.meta.env.VITE_API_URL?.trim().replace(/\/+$/, "");
+const API_URL = configuredApiUrl
+  ? configuredApiUrl.endsWith("/api") ? configuredApiUrl : `${configuredApiUrl}/api`
+  : import.meta.env.DEV ? "/api" : "";
+const configuredSocketUrl = import.meta.env.VITE_SOCKET_URL?.trim().replace(/\/+$/, "");
+const SOCKET_URL = configuredSocketUrl || (API_URL ? new URL(API_URL, window.location.origin).origin : "");
 const AI_CHAT_ID = "orbit-ai";
 const getToken = () => localStorage.getItem("orbit-token");
 const getAiHistoryKey = (userId) => `orbit-ai-messages:${userId}`;
@@ -49,6 +53,9 @@ function getRecentAiMessages(messages, userId) {
 }
 
 async function request(path, options = {}) {
+  if (!API_URL) {
+    throw new Error("The chat API is not configured. Set VITE_API_URL to your deployed API URL and redeploy the client.");
+  }
   let response;
   try {
     response = await fetch(`${API_URL}${path}`, {
@@ -350,6 +357,10 @@ function App() {
   useEffect(() => {
     if (!user) return;
     loadChats();
+    if (!SOCKET_URL) {
+      setError("The chat API is not configured. Set VITE_API_URL to your deployed API URL and redeploy the client.");
+      return;
+    }
     const socket = io(SOCKET_URL, { auth: { token: getToken() }, reconnection: true });
     socketRef.current = socket;
     socket.on("connect_error", (connectionError) => {
